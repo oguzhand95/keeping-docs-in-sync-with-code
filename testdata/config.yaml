@@ -1,0 +1,8 @@
+engine:
+  cacheSize: 100
+server:
+  credentials:
+    username: test
+    password: test
+  http:
+    httpAddr: ":8080"
