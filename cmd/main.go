@@ -12,7 +12,7 @@ import (
 )
 
 type cli struct {
-	Config string `help:"Path to config file" type:"existingfile" required:"" placeholder:"./config.yaml" env:"CERBOS_CONFIG"`
+	Config string `help:"Path to config file" type:"existingfile" required:"" placeholder:"./config.yaml" env:"KEEPSYNC_CONFIG"`
 }
 
 func (c *cli) Run() error {

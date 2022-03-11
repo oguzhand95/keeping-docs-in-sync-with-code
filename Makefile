@@ -1,6 +1,6 @@
 include tools/tools.mk
 
-build: deps
+build: deps lint
 	go build -o ./bin/ cmd/main.go
 
 docs:
