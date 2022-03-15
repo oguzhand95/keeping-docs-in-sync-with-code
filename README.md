@@ -5,7 +5,7 @@ implementation made in the workshop will be based from the `main` branch.
 
 ## Requirements
 
-- [Go](https://go.dev/)
+- [Go >=1.17](https://go.dev/)
 - make
 
 ## Usage
