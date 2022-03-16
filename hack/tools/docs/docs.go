@@ -19,6 +19,9 @@ import (
 const (
 	interfacePackage = "github.com/oguzhand95/keeping-docs-in-sync-with-code/internal/config"
 	interfaceName    = "Section"
+
+	keyRequired        = "required"
+	optionExampleValue = "example"
 )
 
 var (
@@ -28,6 +31,8 @@ var (
 	fileName  = color.New(color.FgHiCyan).SprintfFunc()
 	fieldDoc  = color.New(color.FgHiWhite).SprintfFunc()
 	fieldName = color.New(color.FgHiGreen).SprintFunc()
+	required  = color.New(color.FgHiWhite, color.Bold).SprintFunc()
+	example   = color.New(color.FgHiYellow).SprintFunc()
 
 	errTagNotExists = fmt.Errorf("tag does not exist")
 )
@@ -74,6 +79,10 @@ func printFields(fields []FieldInfo, indent int) error {
 		if field.Documentation != "" {
 			doc = fieldDoc("# %s", field.Documentation)
 		}
+		if tag.Required {
+			doc = fmt.Sprintf("%s %s", doc, required("[REQUIRED]"))
+		}
+
 		if field.Fields != nil {
 			log.Printf("%s%s: %s\n", mkIndent(indent), fieldName(tag.Name), doc)
 			if field.Array {
@@ -88,7 +97,7 @@ func printFields(fields []FieldInfo, indent int) error {
 			}
 			continue
 		}
-		log.Printf("%s%s %s", mkIndent(indent), fieldName(tag.Name), doc)
+		log.Printf("%s%s: %s %s", mkIndent(indent), fieldName(tag.Name), example(tag.DefaultValue), doc)
 	}
 
 	return nil
@@ -233,9 +242,27 @@ func parseTag(tag string) (*TagInfo, error) {
 		return nil, errTagNotExists
 	}
 
-	return &TagInfo{
+	ti := &TagInfo{
 		Name: yamlTag.Value(),
-	}, nil
+	}
+
+	if confTag, _ := t.Get("conf"); confTag != nil {
+		switch confTag.Name {
+		case keyRequired:
+			ti.Required = true
+		}
+
+		for _, option := range confTag.Options {
+			sp := strings.SplitN(option, "=", 2)
+
+			switch sp[0] {
+			case optionExampleValue:
+				ti.DefaultValue = sp[1]
+			}
+		}
+	}
+
+	return ti, nil
 }
 
 type StructInfo struct {
