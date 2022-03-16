@@ -25,6 +25,7 @@ var (
 
 	header    = color.New(color.FgHiWhite, color.Bold).SprintFunc()
 	fileName  = color.New(color.FgHiCyan).SprintfFunc()
+	fieldDoc  = color.New(color.FgHiWhite).SprintfFunc()
 	fieldName = color.New(color.FgHiGreen).SprintFunc()
 )
 
@@ -61,8 +62,12 @@ func mkIndent(indent int) string {
 func printFields(fields []FieldInfo, indent int) error {
 	for _, field := range fields {
 		name := field.Name
+		doc := ""
+		if field.Documentation != "" {
+			doc = fieldDoc("# %s", field.Documentation)
+		}
 		if field.Fields != nil {
-			log.Printf("%s%s:\n", mkIndent(indent), name)
+			log.Printf("%s%s: %s\n", mkIndent(indent), fieldName(name), doc)
 			if field.Array {
 				log.Printf("- \n")
 				if err := printFields(field.Fields, indent+1); err != nil {
@@ -75,7 +80,7 @@ func printFields(fields []FieldInfo, indent int) error {
 			}
 			continue
 		}
-		log.Printf("%s%s ", mkIndent(indent), name)
+		log.Printf("%s%s %s", mkIndent(indent), fieldName(name), doc)
 	}
 
 	return nil
@@ -160,8 +165,47 @@ func inspect(pkg *packages.Package, obj types.Object) *StructInfo {
 func inspectStruct(node ast.Expr) []FieldInfo {
 	var fields []FieldInfo
 
-	// TODO: Implement me
-	// switch t := node.(type) {}
+	switch t := node.(type) {
+	case *ast.StructType:
+		for _, f := range t.Fields.List {
+			if len(f.Names) == 0 {
+				i, ok := f.Type.(*ast.Ident)
+				if ok {
+					ts, ok := i.Obj.Decl.(*ast.TypeSpec)
+					if ok {
+						st, ok := ts.Type.(*ast.StructType)
+						if ok {
+							fields = inspectStruct(st)
+							continue
+						}
+					}
+				}
+			}
+
+			fi := FieldInfo{Name: f.Names[0].Name, Documentation: strings.TrimSpace(f.Doc.Text())}
+			if f.Tag != nil {
+				fi.Tag = f.Tag.Value
+			}
+
+			if _, ok := f.Type.(*ast.ArrayType); ok {
+				fi.Array = true
+			}
+
+			fi.Fields = inspectStruct(f.Type)
+
+			fields = append(fields, fi)
+		}
+	case *ast.StarExpr:
+		return inspectStruct(t.X)
+	case *ast.Ident:
+		if t.Obj != nil && t.Obj.Kind == ast.Typ {
+			if ts, ok := t.Obj.Decl.(*ast.TypeSpec); ok {
+				return inspectStruct(ts.Type)
+			}
+		}
+	case *ast.ArrayType:
+		return inspectStruct(t.Elt)
+	}
 
 	return fields
 }
