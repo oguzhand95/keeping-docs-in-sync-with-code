@@ -9,6 +9,7 @@ import (
 	"go/types"
 	"log"
 	"path/filepath"
+	"strings"
 
 	"github.com/fatih/color"
 	"golang.org/x/tools/go/packages"
@@ -17,6 +18,7 @@ import (
 const (
 	interfacePackage = "github.com/oguzhand95/keeping-docs-in-sync-with-code/internal/config"
 	interfaceName    = "Section"
+	indentChar       = "  "
 )
 
 var (
@@ -41,14 +43,41 @@ func main() {
 		log.Fatalf("failed to find %s.%s: %v", interfacePackage, interfaceName, err)
 	}
 
-	log.Println(Header("FOUND STRUCTS"))
+	log.Println(Header("Conf structs"))
 	structs := findIfaceImplementors(iface, pkgs)
-	for _, structInfo := range structs {
-		log.Printf(FileName("%s.%s", structInfo.Pkg, structInfo.Name))
-		for _, field := range structInfo.Fields {
-			log.Printf(FieldName(field.Name))
+	for _, s := range structs {
+		log.Printf(FileName("%s.%s", s.Pkg, s.Name))
+		if err = printFields(s.Fields, 1); err != nil {
+			log.Fatalf("failed to print fields: %v", err)
 		}
 	}
+}
+
+func mkIndent(indent int) string {
+	return strings.Repeat(indentChar, indent)
+}
+
+func printFields(fields []FieldInfo, indent int) error {
+	for _, field := range fields {
+		name := field.Name
+		if field.Fields != nil {
+			log.Printf("%s%s:\n", mkIndent(indent), name)
+			if field.Array {
+				log.Printf("- \n")
+				if err := printFields(field.Fields, indent+1); err != nil {
+					return err
+				}
+				continue
+			}
+			if err := printFields(field.Fields, indent+1); err != nil {
+				return err
+			}
+			continue
+		}
+		log.Printf("%s%s ", mkIndent(indent), name)
+	}
+
+	return nil
 }
 
 func loadPackages(pkgDir string) ([]*packages.Package, error) {
@@ -130,7 +159,7 @@ func inspect(pkg *packages.Package, obj types.Object) *StructInfo {
 func inspectStruct(node ast.Expr) []FieldInfo {
 	var fields []FieldInfo
 
-	// TODO: Implement
+	// TODO: Implement me
 	// switch t := node.(type) {}
 
 	return fields
@@ -148,4 +177,11 @@ type FieldInfo struct {
 	Tag           string
 	Fields        []FieldInfo
 	Array         bool
+}
+
+type TagInfo struct {
+	DefaultValue string
+	Name         string
+	Ignore       bool
+	Required     bool
 }
