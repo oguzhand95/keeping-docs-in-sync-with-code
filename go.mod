@@ -5,6 +5,7 @@ go 1.17
 require (
 	github.com/alecthomas/kong v0.5.0
 	github.com/fatih/color v1.13.0
+	github.com/fatih/structtag v1.2.0
 	go.uber.org/config v1.4.0
 	golang.org/x/tools v0.0.0-20191104232314-dc038396d1f0
 )
