@@ -18,13 +18,14 @@ import (
 const (
 	interfacePackage = "github.com/oguzhand95/keeping-docs-in-sync-with-code/internal/config"
 	interfaceName    = "Section"
-	indentChar       = "  "
 )
 
 var (
-	Header    = color.New(color.FgHiWhite, color.Bold).SprintFunc()
-	FileName  = color.New(color.FgHiCyan).SprintfFunc()
-	FieldName = color.New(color.FgHiGreen).SprintFunc()
+	indentChar = strings.Repeat(" ", 4)
+
+	header    = color.New(color.FgHiWhite, color.Bold).SprintFunc()
+	fileName  = color.New(color.FgHiCyan).SprintfFunc()
+	fieldName = color.New(color.FgHiGreen).SprintFunc()
 )
 
 func main() {
@@ -43,10 +44,10 @@ func main() {
 		log.Fatalf("failed to find %s.%s: %v", interfacePackage, interfaceName, err)
 	}
 
-	log.Println(Header("Conf structs"))
+	log.Println(header("Conf structs"))
 	structs := findIfaceImplementors(iface, pkgs)
 	for _, s := range structs {
-		log.Printf(FileName("%s.%s", s.Pkg, s.Name))
+		log.Printf(fileName("%s.%s", s.Pkg, s.Name))
 		if err = printFields(s.Fields, 1); err != nil {
 			log.Fatalf("failed to print fields: %v", err)
 		}
