@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
+	"github.com/fatih/structtag"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -27,6 +28,8 @@ var (
 	fileName  = color.New(color.FgHiCyan).SprintfFunc()
 	fieldDoc  = color.New(color.FgHiWhite).SprintfFunc()
 	fieldName = color.New(color.FgHiGreen).SprintFunc()
+
+	errTagNotExists = fmt.Errorf("tag does not exist")
 )
 
 func main() {
@@ -61,13 +64,18 @@ func mkIndent(indent int) string {
 
 func printFields(fields []FieldInfo, indent int) error {
 	for _, field := range fields {
-		name := field.Name
 		doc := ""
+
+		tag, err := parseTag(field.Tag)
+		if err != nil {
+			return fmt.Errorf("failed to parse tags: %w", err)
+		}
+
 		if field.Documentation != "" {
 			doc = fieldDoc("# %s", field.Documentation)
 		}
 		if field.Fields != nil {
-			log.Printf("%s%s: %s\n", mkIndent(indent), fieldName(name), doc)
+			log.Printf("%s%s: %s\n", mkIndent(indent), fieldName(tag.Name), doc)
 			if field.Array {
 				log.Printf("- \n")
 				if err := printFields(field.Fields, indent+1); err != nil {
@@ -80,7 +88,7 @@ func printFields(fields []FieldInfo, indent int) error {
 			}
 			continue
 		}
-		log.Printf("%s%s %s", mkIndent(indent), fieldName(name), doc)
+		log.Printf("%s%s %s", mkIndent(indent), fieldName(tag.Name), doc)
 	}
 
 	return nil
@@ -208,6 +216,26 @@ func inspectStruct(node ast.Expr) []FieldInfo {
 	}
 
 	return fields
+}
+
+func parseTag(tag string) (*TagInfo, error) {
+	t, err := structtag.Parse(tag[1 : len(tag)-1])
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse tags with structtag: %w", err)
+	}
+
+	if t == nil {
+		return nil, errTagNotExists
+	}
+
+	yamlTag, err := t.Get("yaml")
+	if err != nil {
+		return nil, errTagNotExists
+	}
+
+	return &TagInfo{
+		Name: yamlTag.Value(),
+	}, nil
 }
 
 type StructInfo struct {
